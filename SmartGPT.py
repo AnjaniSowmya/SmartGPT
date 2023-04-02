@@ -63,109 +63,100 @@ def get_similarity(relevance_vector, input_text, allmax=False):
         return indexes
     return max_index
 
-# Load data from Excel sheet
-relevance = pd.read_excel('gptdata.xlsx', sheet_name='Relevance')
-# Preprocess data
-relevance['Question'] = relevance['Question'].apply(preprocess)
-# Fit the vectorizer to the data
-relevance_vector = vectorizer.fit_transform(relevance['Question'])
-rel_name = ''
-skip_question = False
+def get_answer(question, rel_name=''):
+    # Load data from Excel sheet
+    relevance = pd.read_excel('gptdata.xlsx', sheet_name='Relevance')
+    # Preprocess data
+    relevance['Question'] = relevance['Question'].apply(preprocess)
+    # Fit the vectorizer to the data
+    relevance_vector = vectorizer.fit_transform(relevance['Question'])
+    skip_question = False
+    
+    # Get response from the sheet based on user input
+    relset = False
+    if rel_name=='':
+        rel_index = get_similarity(relevance_vector, question)
+        if rel_index==-1:
+            return {'answer': 'Sorry, I could not understand your question. Please rephrase and try again.', 'rel_name': ''}
+        rel_name = relevance.iloc[rel_index]['Relevance']
+        #print('Relevance:', rel_name)
+    else:
+        relset = True
+    type = get_rel_type(rel_name)
+    #print('Type: ', type)
+    if type=='QNA':
+        # Load data from Excel sheet
+        rel_sheet = pd.read_excel('gptdata.xlsx', sheet_name=rel_name)
+        # Preprocess data
+        rel_sheet['Question'] = rel_sheet['Question'].apply(preprocess)
+        # Fit the vectorizer to the data
+        rel_sheet_vector = vectorizer.fit_transform(rel_sheet['Question'])
+        index = get_similarity(rel_sheet_vector, question)
+        if index==-1:
+            if relset==True:
+                return get_answer(question)
+            else:
+                return {'answer': 'Sorry, I could not understand your question. Please rephrase and try again.', 'rel_name': ''}
+        rel_name = rel_sheet.iloc[index]['Relevance']
+        return {'answer': rel_sheet.iloc[index]['Answer'], 'rel_name': rel_name}
+    elif type=='DataSheet':
+        # Load data from Excel sheet
+        rel_sheet = pd.read_excel('gptdata.xlsx', sheet_name='DataSheet')
+        # print(rel_sheet)
+        rel_data_sheet = rel_sheet[rel_sheet['Sheet']==rel_name]
+        # print(rel_data_sheet)
+        rel_data_sheet['Question'] = rel_data_sheet['Question'].apply(preprocess)
+        # print(rel_data_sheet['Question'])
+        # Fit the vectorizer to the data
+        rel_data_sheet_vector = vectorizer.fit_transform(rel_data_sheet['Question'])
+        index = get_similarity(rel_data_sheet_vector, question)
+        if index==-1:
+            return {'answer': 'Sorry, I could not understand your question. Please rephrase and try again.', 'rel_name': ''}
+        type = rel_data_sheet.iloc[index]['Type']
+        output = rel_data_sheet.iloc[index]['Output']
+        unique = rel_data_sheet.iloc[index]['Unique']
+        #print('Question is of type: ' + type + ' and it is related to: ' + rel_data_sheet.iloc[index]['Name'])
+        search_in = rel_data_sheet.iloc[index]['Input'].split(',')
+        # print(search_in)
+        rel_details_sheet = pd.read_excel('gptdata.xlsx', sheet_name=rel_name)
+        combined_details = ''
+        for i in range(len(search_in)):
+            #print('Input: '+ search_in[i])
+            combined_details+=' '+rel_details_sheet[search_in[i]]
+        combined_details = combined_details.apply(preprocess)
+        combined_details_vector = vectorizer.fit_transform(combined_details)
+        dindex = get_similarity(combined_details_vector, question, True)
+        #print(combined_details)
+        if dindex==-1:
+            return {'answer': 'Sorry, I could not understand your question. Please rephrase and try again.', 'rel_name': ''}
+        else:
+            rds1 = rel_details_sheet.filter(items=dindex, axis=0)
+            rds2 = rds1.drop_duplicates(subset = unique)
+            t = Template(output)
+            values = { 'NL': '\n' }
+            for i in range(len(search_in)):
+                values[search_in[i]] = rel_details_sheet.iloc[dindex[0]][search_in[i]]
+            if type == 'Count':
+                values['Count'] = len(rds2)
+            elif type == 'List':
+                list = ''
+                for i in range(len(rds2)):
+                    list += rds2.iloc[i][unique] + '\n'
+                values['List'] = list
+            return {'answer': t.substitute(values), 'rel_name': ''}
 
+rel_name = ''
 print('\nWelcome to SmartGPT!\nYou can ask me any question and I am here to help you.')
 
 # Define a loop to get user input and generate responses
 while True:
     # Get user input
     #print('Current relevance: ', rel_name, '\n')
-    if skip_question==False:
-        question = input('\nPlease enter your question: ').lower()
-    skip_question=False
+    question = input('\nPlease enter your question: ').lower()
     if question == 'bye':
         print('It was nice talking to you\n')
         break
     else:
-    # Get response from the sheet based on user input
-        relset = False
-        if rel_name=='':
-            rel_index = get_similarity(relevance_vector, question)
-            if rel_index==-1:
-                print('Sorry, I could not understand your question. Please rephrase and try again.')
-                continue
-            rel_name = relevance.iloc[rel_index]['Relevance']
-            #print('Relevance:', rel_name)
-        else:
-            relset = True
-        type = get_rel_type(rel_name)
-        #print('Type: ', type)
-        if type=='QNA':
-            # Load data from Excel sheet
-            rel_sheet = pd.read_excel('gptdata.xlsx', sheet_name=rel_name)
-            # Preprocess data
-            rel_sheet['Question'] = rel_sheet['Question'].apply(preprocess)
-            # Fit the vectorizer to the data
-            rel_sheet_vector = vectorizer.fit_transform(rel_sheet['Question'])
-            index = get_similarity(rel_sheet_vector, question)
-            if index==-1:
-                if relset==True:
-                    relset=False
-                    rel_name = ''
-                    relevance_vector = vectorizer.fit_transform(relevance['Question'])
-                    skip_question=True
-                    continue
-                else:
-                    print('Sorry, I could not understand your question. Please rephrase and try again.')
-                    continue
-            rel_name = rel_sheet.iloc[index]['Relevance']
-            print(rel_sheet.iloc[index]['Answer'])
-        elif type=='DataSheet':
-            # Load data from Excel sheet
-            rel_sheet = pd.read_excel('gptdata.xlsx', sheet_name='DataSheet')
-            # print(rel_sheet)
-            rel_data_sheet = rel_sheet[rel_sheet['Sheet']==rel_name]
-            # print(rel_data_sheet)
-            rel_data_sheet['Question'] = rel_data_sheet['Question'].apply(preprocess)
-            # print(rel_data_sheet['Question'])
-            # Fit the vectorizer to the data
-            rel_data_sheet_vector = vectorizer.fit_transform(rel_data_sheet['Question'])
-            index = get_similarity(rel_data_sheet_vector, question)
-            if index==-1:
-                print('Sorry, I could not understand your question. Please rephrase and try again.')
-                continue
-            type = rel_data_sheet.iloc[index]['Type']
-            output = rel_data_sheet.iloc[index]['Output']
-            unique = rel_data_sheet.iloc[index]['Unique']
-            #print('Question is of type: ' + type + ' and it is related to: ' + rel_data_sheet.iloc[index]['Name'])
-            search_in = rel_data_sheet.iloc[index]['Input'].split(',')
-            # print(search_in)
-            rel_details_sheet = pd.read_excel('gptdata.xlsx', sheet_name=rel_name)
-            combined_details = ''
-            for i in range(len(search_in)):
-                #print('Input: '+ search_in[i])
-                combined_details+=' '+rel_details_sheet[search_in[i]]
-            combined_details = combined_details.apply(preprocess)
-            combined_details_vector = vectorizer.fit_transform(combined_details)
-            dindex = get_similarity(combined_details_vector, question, True)
-            #print(combined_details)
-            if dindex==-1:
-                print('Sorry, I could not understand your question. Please rephrase and try again.')
-                continue
-            else:
-                rds1 = rel_details_sheet.filter(items=dindex, axis=0)
-                rds2 = rds1.drop_duplicates(subset = unique)
-                t = Template(output)
-                values = { 'NL': '\n' }
-                for i in range(len(search_in)):
-                    values[search_in[i]] = rel_details_sheet.iloc[dindex[0]][search_in[i]]
-                if type == 'Count':
-                    values['Count'] = len(rds2)
-                elif type == 'List':
-                    list = ''
-                    for i in range(len(rds2)):
-                        list += rds2.iloc[i][unique] + '\n'
-                    values['List'] = list
-                print(t.substitute(values))
-                    
-            relset=False
-            rel_name = ''
-            relevance_vector = vectorizer.fit_transform(relevance['Question'])
+        result = get_answer(question, rel_name)
+        rel_name = result['rel_name']
+        print(result['answer'])
