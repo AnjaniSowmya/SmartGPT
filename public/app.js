@@ -46,6 +46,8 @@ class Chatbox {
 
         let msg1 = { name: "Me", message: question }
         this.messages.push(msg1);
+        this.updateChatText(chatbox)
+        textField.value = ''
 
         fetch('http://localhost:3000/api?question='+question+'&rel_name='+this.rel_name, {
             method: 'GET',
@@ -63,12 +65,10 @@ class Chatbox {
             let msg2 = { name: "SmartGPT", message: r.answer };
             this.messages.push(msg2);
             this.updateChatText(chatbox)
-            textField.value = ''
             this.rel_name = r.rel_name;
         }).catch((error) => {
             console.error('Error:', error);
             this.updateChatText(chatbox)
-            textField.value = ''
           });
     }
 
