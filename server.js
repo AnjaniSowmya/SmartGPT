@@ -19,7 +19,8 @@ app.get('/api', (req, res) => {
     });
     childPython.on('close', (code) => {
         console.log(`child process exited with code: ${code}`);
-        res.send(response);
+        const resp = response.replace(/'/g, '"');
+        res.send(resp);
     })
   //res.send('Hello World!')
 })
