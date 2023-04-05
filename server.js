@@ -1,9 +1,12 @@
 const { spawn } = require('child_process')
 const express = require('express')
+const path = require('path')
 const app = express()
 const port = 3000
 
-app.get('/', (req, res) => {
+app.use(express.static('public'));
+
+app.get('/api', (req, res) => {
   const params = req.query.question + " " + req.query.rel_name;
     const childPython = spawn('py', ['SmartGPTProcess.py', req.query.question, req.query.rel_name]);
     let response = '';
