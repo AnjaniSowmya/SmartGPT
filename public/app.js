@@ -8,6 +8,7 @@ class Chatbox {
 
         this.state = false;
         this.messages = [];
+        this.rel_name = '';
     }
 
     display() {
@@ -45,9 +46,8 @@ class Chatbox {
 
         let msg1 = { name: "Me", message: question }
         this.messages.push(msg1);
-        let rel_name = '';
 
-        fetch('http://localhost:3000/api?question='+question+'&rel_name='+rel_name, {
+        fetch('http://localhost:3000/api?question='+question+'&rel_name='+this.rel_name, {
             method: 'GET',
             mode: 'no-cors',
             headers: {
@@ -64,7 +64,7 @@ class Chatbox {
             this.messages.push(msg2);
             this.updateChatText(chatbox)
             textField.value = ''
-
+            this.rel_name = r.rel_name;
         }).catch((error) => {
             console.error('Error:', error);
             this.updateChatText(chatbox)
