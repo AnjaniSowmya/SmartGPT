@@ -66,7 +66,15 @@ body {
     top: 0;
     background: orange;
 }
-
+.chatbox__image--header{
+    padding: 5%;
+}
+.white-color{
+    color: whitesmoke;
+}
+.purple-color{
+    color: #581B98;
+}
 /* MESSAGES */
 .chatbox__messages {
     margin-top: auto;
@@ -110,8 +118,6 @@ body {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: center;
-    padding: 15px 20px;
     border-top-left-radius: 20px;
     border-top-right-radius: 20px;
     box-shadow: var(--primaryBoxShadow);
@@ -122,12 +128,13 @@ body {
 }
 
 .chatbox__heading--header {
-    font-size: 1.2rem;
+    font-size: .8rem;
     color: white;
 }
 
 .chatbox__description--header {
-    font-size: .9rem;
+    font-size: 1rem;
+    margin-top: 3px;
     color: white;
 }
 
