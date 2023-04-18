@@ -62,7 +62,8 @@ class Chatbox {
           })
           .then(r => {
             console.log(r);
-            let msg2 = { name: "SmartGPT", message: r.answer };
+            let answer = r.answer.replace(/\n/g, "<BR>");
+            let msg2 = { name: "SmartGPT", message: answer };
             this.messages.push(msg2);
             this.updateChatText(chatbox)
             this.rel_name = r.rel_name;
